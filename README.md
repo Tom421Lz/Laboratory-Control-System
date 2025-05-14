@@ -36,12 +36,13 @@
 ## 安装与部署
 
 1. 克隆本项目到本地
-2. 配置 Web 服务器，入口目录为 `public`
-3. 创建 MySQL 数据库，导入 `database/migrations/001_create_core_tables.sql` 初始化表结构
-4. 复制 `.env.example` 为 `.env`，填写数据库等配置信息
+2. 创建 MySQL 数据库，导入 `database/migrations/001_create_core_tables.sql` 初始化表结构，创建本地数据库
+3. 修改 `.env` 中的数据库等配置信息
+4. 下来之后删除`/vendor`文件夹
 5. 安装依赖：`composer install`
 6. 生成应用密钥（如有需要）
-7. 启动服务：`composer start` 或 `php -S localhost:8000 -t public`
+7. 前端运行,进入/fronted ,运行`npm run dev`
+8. 后端部署,基于phpstudy,配置网站，配置如下![alt text](image.png)
 
 ## 目录结构
 
