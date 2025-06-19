@@ -25,8 +25,8 @@ class AuthController
         // Find user
         $user = User::where('username', $data['username'])->first();
         
-        // if (!$user || !password_verify($data['password'], $user->password)) {
-        if (!$user || $data['password']!=$user->password) {
+        if (!$user || !password_verify($data['password'], $user->password)) {
+        // if (!$user || $data['password']!=$user->password) {
             $response->getBody()->write(json_encode([
                 'error' => 'Invalid credentials',
                 'data_password' => $data['password'],

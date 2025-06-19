@@ -11,10 +11,10 @@
     <el-card>
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="设备名称">
-          <el-input v-model="searchForm.equipment_name" placeholder="请输入设备名称" />
+          <el-input v-model="searchForm.equipment_name" placeholder="请输入设备名称"clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态">
+          <el-select v-model="searchForm.status" placeholder="请选择状态"clearable>
             <el-option label="全部" value="" />
             <el-option label="待处理" value="pending" />
             <el-option label="进行中" value="in_progress" />
@@ -23,7 +23,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="优先级">
-          <el-select v-model="searchForm.priority" placeholder="请选择优先级">
+          <el-select v-model="searchForm.priority" placeholder="请选择优先级"clearable>
             <el-option label="全部" value="" />
             <el-option label="低" value="low" />
             <el-option label="中" value="medium" />
@@ -58,8 +58,22 @@
           </template>
         </el-table-column>
         <el-table-column prop="assigned_to" label="负责人" />
-        <el-table-column prop="start_date" label="开始日期" />
-        <el-table-column prop="expected_completion_date" label="预计完成日期" />
+        <el-table-column prop="start_date" label="开始日期">
+          <template #default="{ row }">
+            {{ row.start_date ? dayjs(row.start_date).format('YYYY-MM-DD') : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="expected_completion_date" label="预计完成日期">
+          <template #default="{ row }">
+            {{ row.expected_completion_date ? dayjs(row.expected_completion_date).format('YYYY-MM-DD') : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="notes" label="维护说明" />
+        <el-table-column prop="completion_date" label="完成日期">
+          <template #default="{ row }">
+            {{ row.completion_date ? dayjs(row.completion_date).format('YYYY-MM-DD') : '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="250">
           <template #default="{ row }">
             <el-button-group>
@@ -111,18 +125,18 @@
       width="500px"
     >
       <el-form
-        ref="maintenanceForm"
+        ref="maintenanceFormRef"
         :model="maintenanceForm"
         :rules="rules"
         label-width="120px"
       >
-        <el-form-item label="设备" prop="equipment_id">
-          <el-select v-model="maintenanceForm.equipment_id" placeholder="请选择设备">
+        <el-form-item label="故障报告" prop="fault_report_id">
+          <el-select v-model="maintenanceForm.fault_report_id" placeholder="请选择故障报告">
             <el-option
-              v-for="equipment in equipmentList"
-              :key="equipment.id"
-              :label="equipment.name"
-              :value="equipment.id"
+              v-for="report in faultReportList"
+              :key="report.id"
+              :label="`${report.equipment_name} - ${report.description}`"
+              :value="report.id"
             />
           </el-select>
         </el-form-item>
@@ -183,7 +197,7 @@
       width="500px"
     >
       <el-form
-        ref="completeForm"
+        ref="completeFormRef"
         :model="completeForm"
         :rules="completeRules"
         label-width="120px"
@@ -220,6 +234,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
+import dayjs from 'dayjs'
 
 // 数据列表
 const maintenanceList = ref([])
@@ -229,6 +244,7 @@ const pageSize = ref(10)
 const total = ref(0)
 const equipmentList = ref([])
 const users = ref([])
+const faultReportList = ref([])
 
 // 搜索表单
 const searchForm = reactive({
@@ -241,7 +257,7 @@ const searchForm = reactive({
 const dialogVisible = ref(false)
 const dialogType = ref('create')
 const maintenanceForm = reactive({
-  equipment_id: '',
+  fault_report_id: '',
   assigned_to: '',
   priority: 'medium',
   start_date: '',
@@ -252,6 +268,7 @@ const maintenanceForm = reactive({
 // 完成维护任务表单
 const completeDialogVisible = ref(false)
 const currentTask = ref(null)
+const completeFormRef = ref(null)
 const completeForm = reactive({
   completion_date: '',
   result: ''
@@ -259,8 +276,8 @@ const completeForm = reactive({
 
 // 表单验证规则
 const rules = {
-  equipment_id: [
-    { required: true, message: '请选择设备', trigger: 'change' }
+  fault_report_id: [
+    { required: true, message: '请选择故障报告', trigger: 'change' }
   ],
   assigned_to: [
     { required: true, message: '请选择负责人', trigger: 'change' }
@@ -311,8 +328,10 @@ const fetchMaintenanceList = async () => {
 // 获取设备列表
 const fetchEquipmentList = async () => {
   try {
-    const response = await axios.get('/api/equipment')
-    equipmentList.value = response.data
+    const response = await axios.get('/api/equipment', {
+      params: { per_page: 1000 }
+    })
+    equipmentList.value = response.data.data || []
   } catch (error) {
     ElMessage.error('获取设备列表失败')
   }
@@ -325,6 +344,18 @@ const fetchUsers = async () => {
     users.value = response.data
   } catch (error) {
     ElMessage.error('获取用户列表失败')
+  }
+}
+
+// 获取故障报告列表（只取未完成的）
+const fetchFaultReportList = async () => {
+  try {
+    const response = await axios.get('/api/fault', {
+      params: { status: 'pending' }
+    })
+    faultReportList.value = response.data.data || []
+  } catch (error) {
+    ElMessage.error('获取故障报告列表失败')
   }
 }
 
@@ -397,7 +428,7 @@ const handleCurrentChange = (val) => {
 const handleCreateTask = () => {
   dialogType.value = 'create'
   Object.assign(maintenanceForm, {
-    equipment_id: '',
+    fault_report_id: '',
     assigned_to: '',
     priority: 'medium',
     start_date: '',
@@ -410,13 +441,21 @@ const handleCreateTask = () => {
 // 编辑维护任务
 const handleEdit = (row) => {
   dialogType.value = 'edit'
-  Object.assign(maintenanceForm, row)
+  Object.assign(maintenanceForm, {
+    ...row,
+    assigned_to: Number(row.assigned_to),
+    expected_completion_date: row.expected_completion_date ? dayjs(row.expected_completion_date).format('YYYY-MM-DD') : ''
+  })
   dialogVisible.value = true
 }
 
 // 提交维护任务表单
 const handleSubmit = async () => {
   try {
+    // 处理日期格式，确保 expected_completion_date 为 YYYY-MM-DD
+    if (maintenanceForm.expected_completion_date) {
+      maintenanceForm.expected_completion_date = dayjs(maintenanceForm.expected_completion_date).format('YYYY-MM-DD')
+    }
     if (dialogType.value === 'create') {
       await axios.post('/api/maintenance', maintenanceForm)
       ElMessage.success('创建成功')
@@ -475,6 +514,7 @@ onMounted(() => {
   fetchMaintenanceList()
   fetchEquipmentList()
   fetchUsers()
+  fetchFaultReportList()
 })
 </script>
 

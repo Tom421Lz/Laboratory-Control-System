@@ -15,11 +15,13 @@ class EquipmentController
     public function list(Request $request, Response $response): Response
     {
         $equipment = Equipment::with('laboratory')->get();
-        
+        $total = $equipment->count();
+
         $response->getBody()->write(json_encode([
-            'equipment' => $equipment
+            'data' => $equipment,
+            'total' => $total
         ]));
-        
+
         return $response->withHeader('Content-Type', 'application/json');
     }
     
@@ -146,6 +148,16 @@ class EquipmentController
         $faultReport->status = 'pending';
         $faultReport->save();
         
+        // 新增：自动创建维护任务
+        $maintenanceTask = new MaintenanceTask();
+        $maintenanceTask->fault_report_id = $faultReport->id;
+        $maintenanceTask->assigned_to = null; // 可根据需要分配负责人
+        $maintenanceTask->priority = 'medium'; // 可根据severity调整
+        $maintenanceTask->status = 'pending';
+        $maintenanceTask->start_date = date('Y-m-d');
+        $maintenanceTask->notes = $data['description'];
+        $maintenanceTask->save();
+        
         // Update equipment status
         $equipment->status = 'faulty';
         $equipment->save();
@@ -161,8 +173,9 @@ class EquipmentController
         }
         
         $response->getBody()->write(json_encode([
-            'message' => 'Fault report created successfully',
-            'fault_report' => $faultReport
+            'message' => 'Fault report and maintenance task created successfully',
+            'fault_report' => $faultReport,
+            'maintenance_task' => $maintenanceTask
         ]));
         
         return $response->withHeader('Content-Type', 'application/json');
@@ -290,6 +303,31 @@ class EquipmentController
             'maintenance_task' => $maintenanceTask
         ]));
         
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    public function faultReportList(Request $request, Response $response, $args = [])
+    {
+        $params = $request->getQueryParams();
+        $query = \App\Models\FaultReport::with('equipment');
+
+        if (!empty($params['status'])) {
+            $query->where('status', $params['status']);
+        }
+
+        $reports = $query->get()->map(function($report) {
+            return [
+                'id' => $report->id,
+                'equipment_name' => optional($report->equipment)->name,
+                'description' => $report->description,
+                'status' => $report->status,
+                'created_at' => $report->created_at,
+            ];
+        });
+
+        $response->getBody()->write(json_encode([
+            'data' => $reports
+        ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
 } 

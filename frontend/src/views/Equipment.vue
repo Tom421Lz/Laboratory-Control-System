@@ -9,12 +9,20 @@
     </div>
     
     <el-card>
-      <el-form :inline="true" :model="searchForm" class="search-form">
+      <el-form :inline="true" :model="searchForm" class="search-form" ref="searchFormRef">
         <el-form-item label="设备名称">
-          <el-input v-model="searchForm.name" placeholder="请输入设备名称" />
+          <el-input 
+            v-model="searchForm.name" 
+            placeholder="请输入设备名称" 
+            clearable
+          />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态">
+          <el-select 
+            v-model="searchForm.status" 
+            placeholder="请选择状态"
+            clearable
+          >
             <el-option label="全部" value="" />
             <el-option label="正常" value="operational" />
             <el-option label="故障" value="faulty" />
@@ -32,20 +40,30 @@
         v-loading="loading"
         :data="equipmentList"
         style="width: 100%"
+        border
+        stripe
       >
-        <el-table-column prop="name" label="设备名称" />
-        <el-table-column prop="serial_number" label="序列号" />
-        <el-table-column prop="status" label="状态">
+        <el-table-column prop="name" label="设备名称" min-width="120" />
+        <el-table-column prop="serial_number" label="序列号" min-width="150" />
+        <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="laboratory.name" label="所属实验室" />
-        <el-table-column prop="purchase_date" label="购买日期" />
-        <el-table-column prop="warranty_expiry" label="保修到期" />
-        <el-table-column label="操作" width="250">
+        <el-table-column prop="laboratory.name" label="所属实验室" min-width="150" />
+        <el-table-column prop="purchase_date" label="购买日期" width="120">
+          <template #default="{ row }">
+            {{ row.purchase_date ? dayjs(row.purchase_date).format('YYYY-MM-DD') : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="warranty_expiry" label="保修到期" width="120">
+          <template #default="{ row }">
+            {{ row.warranty_expiry ? dayjs(row.warranty_expiry).format('YYYY-MM-DD') : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <el-button-group>
               <el-button
@@ -58,6 +76,7 @@
               <el-button
                 size="small"
                 type="warning"
+                :disabled="row.status === 'disposed'"
                 @click="handleReportFault(row)"
               >
                 报修
@@ -76,11 +95,11 @@
       
       <div class="pagination">
         <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
+          :current-page="currentPage"
+          :page-size="pageSize"
           :total="total"
           :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next"
+          layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
@@ -92,13 +111,16 @@
       v-model="dialogVisible"
       :title="dialogType === 'add' ? '添加设备' : '编辑设备'"
       width="500px"
+      :close-on-click-modal="false"
     >
       <el-form
-        ref="equipmentForm"
+        ref="equipmentFormRef"
+        
         :model="equipmentForm"
         :rules="rules"
         label-width="100px"
       >
+      <!-- 输入有问题 重点这一句 -->
         <el-form-item label="设备名称" prop="name">
           <el-input v-model="equipmentForm.name" />
         </el-form-item>
@@ -106,7 +128,11 @@
           <el-input v-model="equipmentForm.serial_number" />
         </el-form-item>
         <el-form-item label="所属实验室" prop="laboratory_id">
-          <el-select v-model="equipmentForm.laboratory_id" placeholder="请选择实验室">
+          <el-select 
+            v-model="equipmentForm.laboratory_id" 
+            placeholder="请选择实验室"
+            filterable
+          >
             <el-option
               v-for="lab in laboratories"
               :key="lab.id"
@@ -120,6 +146,7 @@
             v-model="equipmentForm.purchase_date"
             type="date"
             placeholder="选择日期"
+            value-format="YYYY-MM-DD"
           />
         </el-form-item>
         <el-form-item label="保修到期" prop="warranty_expiry">
@@ -127,13 +154,18 @@
             v-model="equipmentForm.warranty_expiry"
             type="date"
             placeholder="选择日期"
+            value-format="YYYY-MM-DD"
           />
         </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSubmit">
+          <el-button 
+            type="primary" 
+            @click="handleSubmit"
+            :loading="submitting"
+          >
             确定
           </el-button>
         </span>
@@ -145,9 +177,10 @@
       v-model="faultDialogVisible"
       title="设备报修"
       width="500px"
+      :close-on-click-modal="false"
     >
       <el-form
-        ref="faultForm"
+        ref="faultFormRef"
         :model="faultForm"
         :rules="faultRules"
         label-width="100px"
@@ -157,10 +190,14 @@
             v-model="faultForm.description"
             type="textarea"
             rows="4"
+            placeholder="请详细描述故障现象"
           />
         </el-form-item>
         <el-form-item label="严重程度" prop="severity">
-          <el-select v-model="faultForm.severity" placeholder="请选择严重程度">
+          <el-select 
+            v-model="faultForm.severity" 
+            placeholder="请选择严重程度"
+          >
             <el-option label="轻微" value="low" />
             <el-option label="中等" value="medium" />
             <el-option label="严重" value="high" />
@@ -171,7 +208,11 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="faultDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitFaultReport">
+          <el-button 
+            type="primary" 
+            @click="submitFaultReport"
+            :loading="submittingFault"
+          >
             提交
           </el-button>
         </span>
@@ -181,10 +222,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
+import { debounce } from 'lodash-es'
+import dayjs from 'dayjs'
 
 // 数据列表
 const equipmentList = ref([])
@@ -199,10 +242,12 @@ const searchForm = reactive({
   name: '',
   status: ''
 })
-
+const searchFormRef = ref(null)
 // 设备表单
 const dialogVisible = ref(false)
 const dialogType = ref('add')
+const equipmentFormRef = ref(null)
+const submitting = ref(false)
 const equipmentForm = reactive({
   name: '',
   serial_number: '',
@@ -213,7 +258,9 @@ const equipmentForm = reactive({
 
 // 报修表单
 const faultDialogVisible = ref(false)
+const faultFormRef = ref(null)
 const currentEquipment = ref(null)
+const submittingFault = ref(false)
 const faultForm = reactive({
   description: '',
   severity: 'medium'
@@ -222,16 +269,24 @@ const faultForm = reactive({
 // 表单验证规则
 const rules = {
   name: [
-    { required: true, message: '请输入设备名称', trigger: 'blur' }
+    { required: true, message: '请输入设备名称', trigger: 'blur' },
+    { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
+  ],
+  serial_number: [
+    { required: true, message: '请输入序列号', trigger: 'blur' }
   ],
   laboratory_id: [
     { required: true, message: '请选择所属实验室', trigger: 'change' }
+  ],
+  purchase_date: [
+    { required: true, message: '请选择购买日期', trigger: 'change' }
   ]
 }
 
 const faultRules = {
   description: [
-    { required: true, message: '请输入故障描述', trigger: 'blur' }
+    { required: true, message: '请输入故障描述', trigger: 'blur' },
+    { min: 10, message: '至少输入 10 个字符', trigger: 'blur' }
   ],
   severity: [
     { required: true, message: '请选择严重程度', trigger: 'change' }
@@ -241,8 +296,14 @@ const faultRules = {
 // 获取设备列表
 const fetchEquipmentList = async () => {
   try {
-    loading.value = true
+    loading.value = true;
+    const token = localStorage.getItem('token');
+    console.log(token);
     const response = await axios.get('/api/equipment', {
+      headers: {
+        Authorization: token
+         // token 需要你从登录后保存的地方获取
+      },
       params: {
         page: currentPage.value,
         per_page: pageSize.value,
@@ -252,7 +313,13 @@ const fetchEquipmentList = async () => {
     equipmentList.value = response.data.data
     total.value = response.data.total
   } catch (error) {
-    ElMessage.error('获取设备列表失败')
+    if (error.response) {
+      ElMessage.error(error.response.data.message || '获取设备列表失败')
+    } else if (error.request) {
+      ElMessage.error('网络错误，请检查网络连接')
+    } else {
+      ElMessage.error('请求失败，请重试')
+    }
   } finally {
     loading.value = false
   }
@@ -261,8 +328,15 @@ const fetchEquipmentList = async () => {
 // 获取实验室列表
 const fetchLaboratories = async () => {
   try {
-    const response = await axios.get('/api/laboratories')
+    const token = localStorage.getItem('token');
+    const response = await axios.get('/api/laboratories',{
+      headers: {
+    Authorization:  token // token 需要你从登录后保存的地方获取
+  }
+    })
     laboratories.value = response.data
+    
+
   } catch (error) {
     ElMessage.error('获取实验室列表失败')
   }
@@ -290,10 +364,10 @@ const getStatusText = (status) => {
 }
 
 // 搜索和重置
-const handleSearch = () => {
+const handleSearch = debounce(() => {
   currentPage.value = 1
   fetchEquipmentList()
-}
+}, 300)
 
 const resetSearch = () => {
   searchForm.name = ''
@@ -304,6 +378,7 @@ const resetSearch = () => {
 // 分页处理
 const handleSizeChange = (val) => {
   pageSize.value = val
+  currentPage.value = 1
   fetchEquipmentList()
 }
 
@@ -315,6 +390,10 @@ const handleCurrentChange = (val) => {
 // 添加设备
 const handleAdd = () => {
   dialogType.value = 'add'
+  nextTick(() => {
+  
+    equipmentFormRef.value?.resetFields()
+  })
   Object.assign(equipmentForm, {
     name: '',
     serial_number: '',
@@ -328,6 +407,9 @@ const handleAdd = () => {
 // 编辑设备
 const handleEdit = (row) => {
   dialogType.value = 'edit'
+  nextTick(() => {
+    equipmentFormRef.value?.clearValidate()
+  })
   Object.assign(equipmentForm, row)
   dialogVisible.value = true
 }
@@ -335,6 +417,10 @@ const handleEdit = (row) => {
 // 提交设备表单
 const handleSubmit = async () => {
   try {
+    const valid = await equipmentFormRef.value.validate()
+    if (!valid) return
+    
+    submitting.value = true
     if (dialogType.value === 'add') {
       await axios.post('/api/equipment', equipmentForm)
       ElMessage.success('添加成功')
@@ -345,34 +431,52 @@ const handleSubmit = async () => {
     dialogVisible.value = false
     fetchEquipmentList()
   } catch (error) {
-    ElMessage.error(error.response?.data?.error || '操作失败')
+    let errorMessage = '操作失败'
+    if (error.response) {
+      errorMessage = error.response.data.message || errorMessage
+    }
+    ElMessage.error(errorMessage)
+  } finally {
+    submitting.value = false
   }
 }
 
 // 删除设备
 const handleDelete = (row) => {
   ElMessageBox.confirm(
-    '确定要删除该设备吗？',
+    `确定要删除设备 "${row.name}" 吗？`,
     '警告',
     {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
+      beforeClose: async (action, instance, done) => {
+        if (action === 'confirm') {
+          instance.confirmButtonLoading = true
+          try {
+            await axios.delete(`/api/equipment/${row.id}`)
+            ElMessage.success('删除成功')
+            fetchEquipmentList()
+            done()
+          } catch (error) {
+            ElMessage.error(error.response?.data?.message || '删除失败')
+          } finally {
+            instance.confirmButtonLoading = false
+          }
+        } else {
+          done()
+        }
+      }
     }
-  ).then(async () => {
-    try {
-      await axios.delete(`/api/equipment/${row.id}`)
-      ElMessage.success('删除成功')
-      fetchEquipmentList()
-    } catch (error) {
-      ElMessage.error(error.response?.data?.error || '删除失败')
-    }
-  })
+  )
 }
 
 // 报修处理
 const handleReportFault = (row) => {
   currentEquipment.value = row
+  nextTick(() => {
+    faultFormRef.value?.resetFields()
+  })
   faultForm.description = ''
   faultForm.severity = 'medium'
   faultDialogVisible.value = true
@@ -380,6 +484,10 @@ const handleReportFault = (row) => {
 
 const submitFaultReport = async () => {
   try {
+    const valid = await faultFormRef.value.validate()
+    if (!valid) return
+    
+    submittingFault.value = true
     await axios.post('/api/equipment/fault', {
       equipment_id: currentEquipment.value.id,
       ...faultForm
@@ -388,7 +496,9 @@ const submitFaultReport = async () => {
     faultDialogVisible.value = false
     fetchEquipmentList()
   } catch (error) {
-    ElMessage.error(error.response?.data?.error || '报修失败')
+    ElMessage.error(error.response?.data?.message || '报修失败')
+  } finally {
+    submittingFault.value = false
   }
 }
 
@@ -418,4 +528,21 @@ onMounted(() => {
   margin-top: 20px;
   text-align: right;
 }
-</style> 
+
+@media (max-width: 768px) {
+  .search-form :deep(.el-form-item) {
+    margin-right: 0;
+    margin-bottom: 10px;
+    width: 100%;
+  }
+  
+  .search-form :deep(.el-form-item__content) {
+    width: 100%;
+  }
+  
+  .search-form :deep(.el-input),
+  .search-form :deep(.el-select) {
+    width: 100%;
+  }
+}
+</style>

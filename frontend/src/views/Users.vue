@@ -105,7 +105,7 @@
       width="500px"
     >
       <el-form
-        ref="userForm"
+        ref="userFormRef"
         :model="userForm"
         :rules="rules"
         label-width="100px"
@@ -120,7 +120,8 @@
           <el-select v-model="userForm.role" placeholder="请选择角色">
             <el-option label="超级管理员" value="super_admin" />
             <el-option label="管理员" value="admin" />
-            <el-option label="普通用户" value="user" />
+            <el-option label="学生" value="student" />
+            
           </el-select>
         </el-form-item>
         <el-form-item label="密码" prop="password" v-if="dialogType === 'add'">
@@ -132,6 +133,7 @@
         </el-form-item>
         <el-form-item label="确认密码" prop="confirmPassword" v-if="dialogType === 'add'">
           <el-input
+
             v-model="userForm.confirmPassword"
             type="password"
             show-password
@@ -155,7 +157,7 @@
       width="500px"
     >
       <el-form
-        ref="resetPasswordForm"
+        ref="resetPasswordFormRef"
         :model="resetPasswordForm"
         :rules="resetPasswordRules"
         label-width="100px"
@@ -210,6 +212,7 @@ const searchForm = reactive({
 // 用户表单
 const dialogVisible = ref(false)
 const dialogType = ref('add')
+const userFormRef = ref(null)
 const userForm = reactive({
   username: '',
   email: '',
@@ -221,6 +224,7 @@ const userForm = reactive({
 // 重置密码表单
 const resetPasswordDialogVisible = ref(false)
 const currentUser = ref(null)
+const resetPasswordFormRef = ref(null)
 const resetPasswordForm = reactive({
   password: '',
   confirmPassword: ''

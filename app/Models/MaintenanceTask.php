@@ -12,12 +12,14 @@ class MaintenanceTask extends Model
         'priority',
         'status',
         'start_date',
+        'expected_completion_date',
         'completion_date',
         'notes'
     ];
 
     protected $casts = [
         'start_date' => 'date',
+        'expected_completion_date' => 'date',
         'completion_date' => 'date'
     ];
 

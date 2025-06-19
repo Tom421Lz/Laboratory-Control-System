@@ -7,11 +7,12 @@ const routes = [
     component: () => import('../views/Login.vue'),
     meta: { requiresAuth: false }
   },
-  // {
-  //   path: '/register',
-  //   name: 'Register',
-  //   component: () => import('@/views/Register.vue')
-  // },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/Register.vue'),
+    meta: { requiresAuth: false }
+  },
   {
     path: '/',
     component: () => import('../views/Layout.vue'),
@@ -41,6 +42,11 @@ const routes = [
         path: 'users',
         name: 'Users',
         component: () => import('../views/Users.vue')
+      },
+      {
+        path: 'laboratories',
+        name: 'Laboratories',
+        component: () => import('../views/Laboratories.vue')
       }
     ]
   }

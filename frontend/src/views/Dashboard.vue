@@ -51,6 +51,19 @@
     </el-row>
     
     <el-row :gutter="20" class="mt-20">
+      <el-col :span="24">
+        <el-card>
+          <template #header>
+            <div class="card-header">
+              <span>近30天故障与维护趋势</span>
+            </div>
+          </template>
+          <v-chart :option="lineChartOption" autoresize style="height: 320px; width: 100%" />
+        </el-card>
+      </el-col>
+    </el-row>
+    
+    <el-row :gutter="20" class="mt-20">
       <el-col :span="12">
         <el-card>
           <template #header>
@@ -100,6 +113,13 @@
 import { ref, onMounted } from 'vue'
 import { Tools, Warning, Setting, Box } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { use } from 'echarts/core'
+import VChart from 'vue-echarts'
+import { LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+
+use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer])
 
 const stats = ref({
   equipmentCount: 0,
@@ -108,8 +128,14 @@ const stats = ref({
   resourceCount: 0
 })
 
+// 最近故障报告
 const recentFaults = ref([])
+
+// 最近维护任务 
 const recentMaintenance = ref([])
+
+const recentStats = ref([])
+const lineChartOption = ref({})
 
 const getSeverityType = (severity) => {
   const types = {
@@ -134,11 +160,37 @@ const getStatusType = (status) => {
 const fetchDashboardData = async () => {
   try {
     const response = await axios.get('/api/dashboard')
-    const { stats: statsData, recentFaults: faults, recentMaintenance: maintenance } = response.data
+    const { stats: statsData, recentFaults: faults, recentMaintenance: maintenance, recentStats: statsArr } = response.data
     
     stats.value = statsData
     recentFaults.value = faults
     recentMaintenance.value = maintenance
+    recentStats.value = statsArr
+    // 配置折线图
+    lineChartOption.value = {
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['故障报告', '维护完成'] },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: statsArr.map(item => item.date)
+      },
+      yAxis: { type: 'value' },
+      series: [
+        {
+          name: '故障报告',
+          type: 'line',
+          data: statsArr.map(item => item.fault_count),
+          smooth: true
+        },
+        {
+          name: '维护完成',
+          type: 'line',
+          data: statsArr.map(item => item.maintenance_count),
+          smooth: true
+        }
+      ]
+    }
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error)
   }

@@ -68,6 +68,7 @@ CREATE TABLE maintenance_tasks (
     priority ENUM('low', 'medium', 'high', 'urgent') NOT NULL,
     status ENUM('pending', 'in_progress', 'completed', 'cancelled') NOT NULL,
     start_date DATE,
+    expected_completion_date DATE,
     completion_date DATE,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

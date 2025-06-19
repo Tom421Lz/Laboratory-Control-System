@@ -1,4 +1,3 @@
-
 <?php
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -67,28 +66,49 @@ $app->group('/api', function (RouteCollectorProxy $group) {
     
     // Protected routes
     $group->group('', function (RouteCollectorProxy $group) {
+        // Dashboard
+        $group->get('/dashboard', 'App\Controllers\DashboardController:index');
+        // Fault report
+        
+        $group->post('/fault', 'App\Controllers\FaultReportController:create');
+        $group->put('/fault/{id}', 'App\Controllers\FaultReportController:update');
+        $group->delete('/fault/{id}', 'App\Controllers\FaultReportController:delete');
         // Resource management
         $group->get('/resources', 'App\Controllers\ResourceController:list');
         $group->post('/resources', 'App\Controllers\ResourceController:create');
         $group->put('/resources/{id}', 'App\Controllers\ResourceController:update');
         $group->delete('/resources/{id}', 'App\Controllers\ResourceController:delete');
+        $group->post('/resources/allocate', 'App\Controllers\ResourceController:allocate');
+        $group->post('/resources/return', 'App\Controllers\ResourceController:return');
         
         // Equipment management
         $group->get('/equipment', 'App\Controllers\EquipmentController:list');
         $group->post('/equipment', 'App\Controllers\EquipmentController:create');
         $group->put('/equipment/{id}', 'App\Controllers\EquipmentController:update');
         $group->delete('/equipment/{id}', 'App\Controllers\EquipmentController:delete');
+        $group->post('/equipment/fault', 'App\Controllers\EquipmentController:reportFault');
+        $group->get('/fault', 'App\Controllers\EquipmentController:faultReportList');
         
         // Maintenance management
         $group->get('/maintenance', 'App\Controllers\MaintenanceController:list');
         $group->post('/maintenance', 'App\Controllers\MaintenanceController:create');
         $group->put('/maintenance/{id}', 'App\Controllers\MaintenanceController:update');
+        $group->post('/maintenance/{id}/complete', 'App\Controllers\MaintenanceController:complete');
+        $group->post('/maintenance/{id}/cancel', 'App\Controllers\MaintenanceController:cancel');
         
         // User management
         $group->get('/users', 'App\Controllers\UserController:list');
         $group->post('/users', 'App\Controllers\UserController:create');
         $group->put('/users/{id}', 'App\Controllers\UserController:update');
         $group->delete('/users/{id}', 'App\Controllers\UserController:delete');
+        $group->post('/users/{id}/reset-password', 'App\Controllers\UserController:resetPassword');
+        $group->post('/users/{id}/toggle-status', 'App\Controllers\UserController:toggleStatus');
+        // Laboratory management
+        $group->get('/laboratories', 'App\Controllers\LaboratoryController:list');
+        $group->post('/laboratories', 'App\Controllers\LaboratoryController:create');
+        
+        $group->put('/laboratories/{id}', 'App\Controllers\LaboratoryController:update');
+        $group->delete('/laboratories/{id}', 'App\Controllers\LaboratoryController:delete');
     })->add('App\Middleware\AuthMiddleware');
 });
 

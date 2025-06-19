@@ -25,6 +25,10 @@
           <el-icon><Setting /></el-icon>
           <span>维护管理</span>
         </el-menu-item>
+        <el-menu-item index="/laboratories" v-if="isAdmin">
+          <el-icon><Box /></el-icon>
+          <span>实验室管理</span>
+        </el-menu-item>
         <el-menu-item index="/users" v-if="isAdmin">
           <el-icon><User /></el-icon>
           <span>用户管理</span>
@@ -41,6 +45,7 @@
           <el-dropdown>
             <span class="user-info">
               {{ username }}
+              <el-tag size="small" type="info" style="margin-left: 8px;">{{ roleLabel }}</el-tag>
               <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
@@ -67,16 +72,28 @@ import { Monitor, Tools, Box, Setting, User, ArrowDown } from '@element-plus/ico
 const router = useRouter()
 const route = useRoute()
 
-const username = ref(localStorage.getItem('username') || '用户')
+const username = ref(localStorage.getItem('username') || '')
+const role = ref(localStorage.getItem('role') || '')
+
 const isAdmin = computed(() => localStorage.getItem('role') === 'admin')
 
 const activeMenu = computed(() => route.path)
 
-const handleLogout = () => {
+const roleLabel = computed(() => {
+  switch (role.value) {
+    case 'admin': return '管理员';
+    case 'teacher': return '教师';
+    case 'student': return '学生';
+    case 'supplier': return '供应商';
+    default: return role.value;
+  }
+})
+
+function handleLogout() {
   localStorage.removeItem('token')
   localStorage.removeItem('username')
   localStorage.removeItem('role')
-  router.push('/login')
+  window.location.href = '/login'
 }
 </script>
 
